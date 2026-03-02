@@ -2,26 +2,33 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
+import os
+import uvicorn
 
 app = FastAPI()
 
-# 1. Database load karein
-embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+# 1. Database load karein (RAM bachane ke liye CPU mode set kiya hai)
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={'device': 'cpu'} 
+)
+
+# Persist directory check karein ki yehi naam hai aapke folder ka
 vector_db = Chroma(persist_directory="./shl_vector_db", embedding_function=embeddings)
 
 # Request format define karein
 class QueryRequest(BaseModel):
     query: str
 
-# 2. Health Check Endpoint [cite: 155]
+# 2. Health Check Endpoint
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
 
-# 3. Recommendation Endpoint [cite: 163]
+# 3. Recommendation Endpoint
 @app.post("/recommend")
 def recommend_assessment(request: QueryRequest):
-    # Search logic: Top 10 results nikaalein [cite: 163]
+    # Search logic: Top 10 results nikaalein
     results = vector_db.similarity_search(request.query, k=10)
     
     recommended = []
@@ -29,8 +36,13 @@ def recommend_assessment(request: QueryRequest):
         recommended.append({
             "url": doc.metadata.get("url", "N/A"),
             "name": doc.metadata.get("name", "N/A"),
-            "description": doc.page_content[:200] + "...", # Pehle 200 words
+            "description": doc.page_content[:200] + "...", 
             "test_type": [doc.metadata.get("test_type", "General")]
         })
     
     return {"recommended_assessments": recommended}
+
+# 4. Render ke liye Port Binding logic
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 10000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
