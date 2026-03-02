@@ -3,8 +3,7 @@ uvicorn
 pandas
 langchain-chroma
 langchain-huggingface
-pydantic==1.10.13
-chromadb==0.4.24
+sentence-transformers
+pydantic<2.0.0
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0+cpu
-sentence-transformers==2.5.1
+torch--index-url https://download.pytorch.org/whl/cpu
